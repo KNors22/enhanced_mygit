@@ -6,7 +6,7 @@
 /** FUNCTION PROTOTYPES */
 int removeByIndex(int n);
 
-// `Node` is used for every version of the file
+//`Node` is used for every version of the file
 class Node
 {
 public:
@@ -182,7 +182,7 @@ namespace LIST
         }
     }
 
-
+void DELETE(){
     // // Removes node at input index and returns stored value.
     // int removeByIndex(int index){
     //     int i = 0;
@@ -207,11 +207,11 @@ namespace LIST
     //
     //     delete temp_node;   // clean up mem
     //     return retval;
-    // }
+    }
 }
 
-
-#ifdef MAIN2
+#define MAIN
+#ifdef MAIN
 int main() {
     history = new Node("Hello World", 123, 1);
     LIST::appendNode("This is another line", 456, 2);

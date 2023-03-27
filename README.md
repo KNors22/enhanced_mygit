@@ -53,4 +53,5 @@ App development history is found in [Commits](#commits) section.
 ## **Commits**
 |   Commit Id   | Description |
 |   ---------   | ----------- |
-| ***CURRENT*** | Initiated using code from `mySimple Git` |
+| ***6841ab9*** | Initiated using code from `mySimple Git`|
+| ***CURRENT*** | Added `Node` and merged `Linked_List`; all features seem to work |
