@@ -54,4 +54,5 @@ App development history is found in [Commits](#commits) section.
 |   Commit Id   | Description |
 |   ---------   | ----------- |
 | ***6841ab9*** | Initiated using code from `mySimple Git`|
-| ***CURRENT*** | Added `Node` and merged `Linked_List`; all features seem to work |
+| ***1fb5566*** | Added `Node` and merged `Linked_List`; all features seem to work |
+| ***CURRENT*** | `getNumberOfVersions()` optimized to O(1) + fixed ~LinkedList() + moved global var as private `Git322` member |

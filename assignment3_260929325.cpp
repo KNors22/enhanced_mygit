@@ -26,11 +26,10 @@ Legal Operations include:
 #define PROMPT ">>"
 #define FILE_NAME "./file.txt"  // only 1 file needed
 
-std::fstream rfile, wfile;
-
 class Node
 {
     public:
+    //TODO: fix constructors
     Node(const std::string c, unsigned int h, int v, Node* n): content(c), hash_value(h), version(v), next(n)
     {
         contentBuffer = new char[c.size() + 1];
@@ -47,7 +46,7 @@ class Node
             strcpy(contentBuffer, c.c_str());    // Copy content to the internal buffer
     }
 
-    ~Node(){}
+    ~Node(){} //destructor
 
     Node* getNext() {return this->next;}
     void setNext(Node* n) {this->next = n;}
@@ -97,14 +96,14 @@ public:
     ~LinkedList(){
         Node* temp, *next = head;
         
-         // delete linked list
-        while(next != nullptr){
-            temp = next->getNext();
-            delete next;
-            next = temp;
-        }
+        // delete linked list
+        // while(next != nullptr){
+        //     temp = next->getNext();
+        //     delete next;
+        //     next = temp;
+        // }
 
-        delete head;
+        // delete head;
     }
 
     /** HELPER FUNCTIONS */
@@ -121,6 +120,8 @@ public:
             while(next->getNext() != nullptr) next = next->getNext();
             next->setNext(hold);
         }
+        
+        this->size++;
         return;
     }
 
@@ -142,17 +143,9 @@ public:
         return nullptr; // unsuccessful!
     }
 
-    int getNumberOfVersions()   // make into class member!
+    int getNumberOfVersions()
     {
-        Node* temp = head;
-        int count = 0;
-
-        while(temp != nullptr){
-            count++;
-            temp = temp->getNext();
-        }
-
-        return count; // return number of versions
+        return this->size;
     }
 
     void printList()
@@ -186,6 +179,7 @@ public:
         if(in_version == 1 || getNumberOfVersions() == 1){
             head = headtmp->getNext();
             headtmp->setNext(nullptr);
+            this->size--;
             return true;
         }
 
@@ -198,6 +192,7 @@ public:
                 headtmp->setNext(nullptr);
                 
                 // delete headtmp;    // remove Node
+                this->size--;
                 return true;
             }
         }
@@ -212,15 +207,29 @@ class Git322
 public:
     Git322(){
         print_welcome_message();
+        readFile();
     };
 
-    ~Git322(){};
+    ~Git322(){
+        if(rfile.is_open())
+            rfile.close();
+    };
 
     //Object Member
     LinkedList mylist;
 
-    void add(std::string content)
+    void add()
     {
+        resetRead();
+
+        std::string aline, content = "";
+        while(getline(rfile, aline)){
+            content += aline;
+            content += '\n';
+        }
+
+        content.erase(content.end()-1); //remove last '\n'
+
         unsigned int hash = hash_it(content);    // hash input `content`
         bool isExist = mylist.checkHashInHistory(hash);  // checks if `content` already added w/ hash
 
@@ -244,6 +253,7 @@ public:
 
     void print()
     {
+        resetRead();
         int count = 0;
         count += mylist.getNumberOfVersions();
 
@@ -253,6 +263,7 @@ public:
 
     void load(int version)
     {
+        resetRead();
         Node* result = mylist.getNodeByVersion(version);
         if(result == nullptr) std::cout << "Error while loading... Try Again!\n";
         std::string content_to_load = result->getContent();
@@ -267,6 +278,7 @@ public:
 
     void remove(int version)
     {
+        resetRead();
         bool flag = mylist.removeNodeByVersion(version);
         std::cout << "Version " << version << " deleted successfully. " << '\n';
         return;
@@ -274,6 +286,7 @@ public:
 
     void compare(int version1, int version2)
     {
+        resetRead();
         // get content using version number and store as istringstream
         std::istringstream content1( mylist.getNodeByVersion(version1)->getContent() );
         std::istringstream content2( mylist.getNodeByVersion(version2)->getContent() );
@@ -286,6 +299,7 @@ public:
 
     void search(std::string keyword)
     {
+        resetRead();
         int count = 0;
         Node* head = mylist.getHead();
 
@@ -295,9 +309,30 @@ public:
         return;
     }
 
+    
 
 private:
-    // HELPER FUNCTIONS
+    // CLASS ATTRIBUTES
+    std::fstream rfile, wfile;  //TODO: how to access it if private and helper also private??
+
+    // HELPER FUNCTIONS AS CLASS METHODS
+    void readFile()
+    {
+        if(!rfile.is_open()) rfile.open(FILE_NAME, std::ios::in);
+        if(rfile.fail()){
+            std::cout << "ERROR 322: `file.txt` does not exist. Goodbye!\n";
+        }
+        return;
+
+        //return std::move(rfile); // does not get deleted with `move`
+    }
+    
+    void resetRead()
+    {
+        rfile.clear();
+        rfile.seekg(0);     // reposition to beginning
+    }
+
     void print_help_message()
     {
         std::string help = "\
@@ -437,19 +472,10 @@ int main(){
     //interactive loop
 	do{
         //opening file in read/write mode
-        if(!rfile.is_open()) rfile.open(FILE_NAME, std::ios::in);
-        if(rfile.fail()){
-            std::cout << "ERROR 322: `file.txt` does not exist. Goodbye!\n";
-            break;
-        }
 
         std::cout << PROMPT << " ";
         std::cin >> user_input;
         std::cin.ignore();      // remove '\n' from stream
-
-
-        rfile.clear();
-        rfile.seekg(0);     // reposition to beginning
 
         // Interprets `user_input`
         std::string aline, content = "";
@@ -459,20 +485,12 @@ int main(){
         {
             case 'e':   /* EXIT */
             {
-                //delete Log;
-                break;
+                break; // Log is deleted after out-of-scope
             }
             
             case 'a':   /* ADD */
             {
-                while(getline(rfile, aline)){
-                    content += aline;
-                    content += '\n';
-                }
-
-                content.erase(content.end()-1); //remove last '\n'
-                
-                Log.add(content);
+                Log.add();
                 break;
             }
 
@@ -560,16 +578,14 @@ int main(){
             }
         }
 
-        rfile.close();
-
     } while(user_input != 'e');
 
     //delete LinkedList::head;
-
-    rfile.close();  // closing file stream
     return 0;
 }
 #endif
+
+
 #ifdef TESTING
 int main(){
     
