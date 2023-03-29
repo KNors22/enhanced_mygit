@@ -22,6 +22,7 @@ Legal Operations include:
 #include <fstream>
 #include <sstream>
 #include <cstring>
+#include <filesystem>
 
 #define PROMPT ">>"
 #define FILE_NAME "./file.txt"  // only 1 file needed
@@ -207,16 +208,12 @@ class Git322
 public:
     Git322(){
         print_welcome_message();
-        readFile();
     };
 
     ~Git322(){
         if(rfile.is_open())
             rfile.close();
     };
-
-    //Object Member
-    LinkedList mylist;
 
     void add()
     {
@@ -263,7 +260,14 @@ public:
 
     void load(int version)
     {
+        if(!this->mylist.getNodeByVersion(version))
+        {
+            std::cout << "Please enter a valid version number. "
+            << "If you are not sure please press 'p' to list all valid version numbers.\n";
+        }
+
         resetRead();
+
         Node* result = mylist.getNodeByVersion(version);
         if(result == nullptr) std::cout << "Error while loading... Try Again!\n";
         std::string content_to_load = result->getContent();
@@ -278,7 +282,12 @@ public:
 
     void remove(int version)
     {
+        if( !this->mylist.getNodeByVersion(version) )
+        {
+            std::cout << "Please enter a valid version number.\n";
+        }
         resetRead();
+        
         bool flag = mylist.removeNodeByVersion(version);
         std::cout << "Version " << version << " deleted successfully. " << '\n';
         return;
@@ -286,6 +295,13 @@ public:
 
     void compare(int version1, int version2)
     {
+        //checking if both valid
+        if( !this->mylist.getNodeByVersion(version1) || !this->mylist.getNodeByVersion(version2) )
+        {
+            std::cout << "Please enter a valid version number. If you are not sure \
+            please press 'p' to list all valid version numbers.\n";
+        }
+
         resetRead();
         // get content using version number and store as istringstream
         std::istringstream content1( mylist.getNodeByVersion(version1)->getContent() );
@@ -311,9 +327,10 @@ public:
 
     
 
-private:
+protected:
     // CLASS ATTRIBUTES
-    std::fstream rfile, wfile;  //TODO: how to access it if private and helper also private??
+    std::fstream rfile, wfile;
+    LinkedList mylist;
 
     // HELPER FUNCTIONS AS CLASS METHODS
     void readFile()
@@ -454,11 +471,205 @@ private:
 
         help_search(keyword, node->getNext(), count, isFoundPrinted);
     }
+
 };
 
 
-#define MAIN
-//#define TESTING  // VERSION WITH LOADED TESTS
+class EnhancedGit322 : public Git322 {
+    public:
+    EnhancedGit322()
+    {
+        namespace fsys = std::filesystem; // for reading and saving files
+        
+        if(!fsys::exists(tempdir)){
+            fsys::create_directory(tempdir); // create tempdir since no old versions
+        } else {
+            //reads files in tempdir 1-by-1, and saves to program memory
+            for (const auto & persistent_file : fsys::directory_iterator(tempdir)){
+                std::string full_path(persistent_file.path());
+                full_path.erase(0,0); // trim both `"`
+                full_path.erase(full_path.end(), full_path.end());
+                
+                rfile.close();
+                if(!readFile(full_path)) continue;
+                this->add();
+            }
+        }
+    }
+    ~EnhancedGit322()
+    {
+        // close any file streams
+        if(rfile.is_open()) rfile.close();
+
+        // save all versions in program mem to persistent layer
+        updatePersistentLayer();
+    };
+
+    private:
+    // CLASS MEMBERS
+    std::string tempdir = ".tempVersionHolder/";
+
+    // sets `rfile` read pointer to `in_file`
+    bool readFile(std::string in_file)
+    {
+        this->resetRead();
+        rfile.open(in_file, std::ios::in);
+        
+        if(rfile.fail()){
+            std::cout << "ERROR 322: `" << in_file << "` does not exist. Goodbye!\n";
+            return false;
+        }
+        return true;
+    }
+
+    // returns file name from full path
+    std::string getFileName(std::string file)
+    {
+        return file.substr(file.find_last_of("/") + 1); // using '/' paths
+    }
+
+    int getVersionNum(std::string in_str)
+    {
+        std::string num = "";
+        for (int i=0; i < in_str.length(); i++) {
+            if(in_str[i] >= '0' && in_str[i] <= '9'){
+                num += in_str[i];
+            }   
+        }
+
+        return std::stoi(num);
+    }
+    
+    bool updatePersistentLayer(const std::string update_this_version = "")
+    {
+        // save all versions
+        if(update_this_version.empty())
+        {
+            for(int i=1; i<= mylist.getNumberOfVersions(); i++)
+            {
+                Node* tempNode = mylist.getNodeByVersion(i);
+                int versionNum = tempNode->getVersion();
+                std::string fileName = tempdir + "file" + std::to_string(versionNum) + ".txt";
+
+                //fileName = "file[1-9].txt"
+                wfile.open(fileName, std::ios::out | std::ios::trunc);
+                if(wfile.fail()) return false;
+                
+                wfile << tempNode->getContent();
+                wfile.close();
+            }
+        }
+        return true;
+    }
+
+};
+
+#define MAIN_ENHANCED   // uses EnhancedGit322
+//#define MAIN          // uses Git322
+//#define TESTING       // VERSION WITH LOADED TESTS
+
+#ifdef MAIN_ENHANCED
+int main(){
+    
+    // Starting...
+    EnhancedGit322 Log;
+    
+    char user_input = ' ';	//user's input stored here
+
+    //interactive loop
+	do{
+        //opening file in read/write mode
+
+        std::cout << PROMPT << " ";
+        std::cin >> user_input;
+        std::cin.ignore();      // remove '\n' from stream
+
+        // Interprets `user_input`
+        std::string aline, content = "";
+        int version1, version2;
+
+        switch(user_input)
+        {
+            case 'e':   /* EXIT */
+            {
+                break; // Log is deleted after out-of-scope
+            }
+            
+            case 'a':   /* ADD */
+            {
+                Log.add();
+                break;
+            }
+
+            case 'r':   /* REMOVE */
+            {
+                std::cout << "Enter the number of the version that you want to delete: ";
+                std::cin >> version1;
+
+                Log.remove(version1);
+                break;
+            }
+
+            case 'l':   /* LOAD */ 
+            {
+                std::cout << "Which version would you like to load? ";
+                std::cin >> version1;
+
+                Log.load(version1);
+                break;
+            }
+
+            case 'p':   /* PRINT */
+            {
+                Log.print();
+                break;
+            }
+
+            case 'c':   /* COMPARE */
+            {
+                std::cout << "Please enter the number of the first version to compare: ";
+                std::cin >> version1;
+                std::cout << "Please enter the number of the second version to compare: ";
+                std::cin >> version2;
+
+                Log.compare(version1, version2);
+                break;
+            }
+
+            case 's':   /* SEARCH */
+            {
+                aline = "";
+                std::cout << "Please enter the keyword that you are looking for: ";
+                std::cin >> aline;  // `aline` reused for input keyword
+                std::cout << '\n';
+                
+                Log.search(aline);
+                break;
+            }
+            
+            default:    /* INVALID INPUT */
+            {
+                std::cout << "Invalid input. Please try one of the following:\n\n";
+                std::string help = "\
+                To add the content of your file to version control press 'a'\n\
+                To remove a version press 'r'\n\
+                To load a version press 'l'\n\
+                To print to the screen the detailed list of all versions press 'p'\n\
+                To compare any 2 versions press 'c'\n\
+                To search versions for a keyword press 's'\n\
+                To exit press 'e'\n";
+
+                std::cout << help << std::endl;
+            }
+        }
+
+    } while(user_input != 'e');
+
+    //delete LinkedList::head;
+    return 0;
+}
+#endif
+
 
 #ifdef MAIN
 int main(){

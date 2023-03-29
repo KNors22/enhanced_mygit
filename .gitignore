@@ -6,3 +6,7 @@ ll
 /to_submit
 err.txt
 git322.dSYM/Contents/Info.plist
+/to_compare.cpp
+.tempVersionHolder/
+mytest
+test.cpp
