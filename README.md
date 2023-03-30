@@ -26,7 +26,18 @@ App development history is found in [Commits](#commits) section.
 | `compare()` | c       | Compare any 2 versions of the file. | ✅ |
 | `search()`  | s       | Search and display all versions with specific keyword. | ✅ |
 | `exit()`    | e       | Exit the program. | ✅ |
+ 
+### Persistence Features
+| Feature       | Description of Feature | Completed |
+| ------------- | ---------------------- |   :----:  |  
+| **Pre-Load**  | Load previous versions from persistence layer to program memory | ✅ |
+| **Add v1**    | *No effect* -> Saving occurs at program exit ~***info loss if crash occurs***~<br> --> Prevent vNum duplicates | ✅ |
+| **Add v2**    | Save versions in progmem at every `load` command ~***better***~ <br> --> Prevent vNum duplicates | ❌ |
+| **Remove**    | Remove target version from persistence layer | ❌ |
+| **Load**      | *No effect on persistence layer* | n/a |
+| **Exit**      | Save existing versions from progmem if needed | ✅ |
 
+#### **Comment:** When using `add()` version numbers cannot be duplicated.
 ---
 ## **Tests**
 
@@ -53,8 +64,10 @@ App development history is found in [Commits](#commits) section.
 ## **Commits**
 |   Commit Id   | Description |
 |   ---------   | ----------- |
-| ***6841ab9*** | Initiated using code from `mySimple Git`|
-| ***1fb5566*** | Added `Node` and merged `Linked_List`; all features seem to work |
-| ***bcf9392*** | `getNumberOfVersions()` optimized to O(1) + fixed ~LinkedList() + moved global var as private `Git322` member |
-| ***CURRENT*** | Added initial `EnhancedGit` with file version persistence feature using `.tmpVersionHolder` dir (buggy) |
+| ***6841ab9*** | - Initiated using code from `mySimple Git`|
+| ***1fb5566*** | - Added `Node` and merged `Linked_List`; all features seem to work |
+| ***bcf9392*** | - `getNumberOfVersions()` O(1) optimized <br> - Fixed ~LinkedList() <br> - Global vars are private `Git322` members |
+| ***1bf0638*** | - Added initial `EnhancedGit` with file version persistence feature using `.tmpVersionHolder` dir ~***buggy***~ |
+| ***CURRENT*** | - Preloading works using `addPersistentFile()` instead of standard `add()`  <br> - Fixed `add()` to point to `file.txt` after preload |
 
+---

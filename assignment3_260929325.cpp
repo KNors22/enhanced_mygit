@@ -211,13 +211,12 @@ public:
     };
 
     ~Git322(){
-        if(rfile.is_open())
-            rfile.close();
+        if(rfile.is_open()) rfile.close();
     };
 
     void add()
     {
-        resetRead();
+        resetRead(); // prevent fstream failure
 
         std::string aline, content = "";
         while(getline(rfile, aline)){
@@ -235,6 +234,9 @@ public:
             std::cout << "git322 did not detect any change to your file and will not create a new version.\n";
             return;
         }
+        
+        // display success message
+        std::cout << "Your content had been added successfully." << std::endl;
 
         // calculate new version number
         int version = mylist.getNumberOfVersions() + 1;
@@ -243,8 +245,6 @@ public:
         std::string strarg(content);
         mylist.appendNode(strarg, hash, version);
 
-        // display success message
-        std::cout << "Your content had been added successfully." << std::endl;  
         return;
     }
 
@@ -491,10 +491,15 @@ class EnhancedGit322 : public Git322 {
                 full_path.erase(full_path.end(), full_path.end());
                 
                 rfile.close();
-                if(!readFile(full_path)) continue;
-                this->add();
+                if(!readFile(full_path)) continue; // point rfile to persistent_file
+
+                int version_num = getVersionNum(getRelativePath(full_path)); // get vNum from file name
+                addPersistentFile(version_num); // pre-load persistent_file
             }
         }
+
+        rfile.close();
+        readFile(FILE_NAME); // point rfile to `file.txt`
     }
     ~EnhancedGit322()
     {
@@ -516,14 +521,14 @@ class EnhancedGit322 : public Git322 {
         rfile.open(in_file, std::ios::in);
         
         if(rfile.fail()){
-            std::cout << "ERROR 322: `" << in_file << "` does not exist. Goodbye!\n";
+            std::cout << "ERROR 322e: `" << in_file << "` could not be loaded properly!\n";
             return false;
         }
         return true;
     }
 
-    // returns file name from full path
-    std::string getFileName(std::string file)
+    // returns relative file name from full path
+    std::string getRelativePath(std::string file)
     {
         return file.substr(file.find_last_of("/") + 1); // using '/' paths
     }
@@ -540,6 +545,27 @@ class EnhancedGit322 : public Git322 {
         return std::stoi(num);
     }
     
+    void addPersistentFile(int version_num)
+    {
+        resetRead();
+
+        std::string aline, content = "";
+        while(getline(rfile, aline)){
+            content += aline;
+            content += '\n';
+        }
+
+        content.erase(content.end()-1); //remove last '\n'
+
+        unsigned int hash = hash_it(content);    // hash input `content`
+
+        // add content from persisten layer
+        std::string strarg(content);
+        mylist.appendNode(strarg, hash, version_num);
+
+        return;
+    }
+
     bool updatePersistentLayer(const std::string update_this_version = "")
     {
         // save all versions
