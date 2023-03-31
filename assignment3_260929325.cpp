@@ -108,7 +108,7 @@ public:
     }
 
     /** HELPER FUNCTIONS */
-    void appendNode(const std::string content, unsigned int hash, int version)
+    void addNode(const std::string content, unsigned int hash, int version)
     {
         Node* next = nullptr;
         Node* hold = new Node(content, hash, version);
@@ -116,12 +116,32 @@ public:
         if(head == nullptr){ // add node if list empty
             head = hold;
         }
-        else{  // append if nonempty
+        else if(head->getVersion() > version){       // Scenario 1: head > hold
+            hold->setNext(head);                                            // Set hold.next = head; hold = head
+            head = hold;
+        }
+        else{  // insert of append if nonempty
             next = head;
-            while(next->getNext() != nullptr) next = next->getNext();
+            Node* nexter = next->getNext();
+            
+            while(nexter != nullptr){      
+            
+                // Insert node
+                if(nexter->getVersion() > version){                 // Scenario 2: next < hold < nexter
+                    hold->setNext(nexter);                          // hold.next = nexter; next.next = hold;
+                    next->setNext(hold);
+                    break;                                          // break loop since set
+                }
+
+                // get next and nexter to check
+                next = nexter;
+                nexter = nexter->getNext();  // get nexter
+            }
+            
+            // append node
             next->setNext(hold);
         }
-        
+        // 1 2 3 6 7 8 (insert 5)
         this->size++;
         return;
     }
@@ -207,7 +227,8 @@ class Git322
 {
 public:
     Git322(){
-        print_welcome_message();
+        printWelcomeMessage();
+        this->next_version_num = 1;
     };
 
     ~Git322(){
@@ -226,7 +247,7 @@ public:
 
         content.erase(content.end()-1); //remove last '\n'
 
-        unsigned int hash = hash_it(content);    // hash input `content`
+        unsigned int hash = hashIt(content);    // hash input `content`
         bool isExist = mylist.checkHashInHistory(hash);  // checks if `content` already added w/ hash
 
         if(content.empty() || isExist)
@@ -239,11 +260,11 @@ public:
         std::cout << "Your content had been added successfully." << std::endl;
 
         // calculate new version number
-        int version = mylist.getNumberOfVersions() + 1;
+        int version = ++this->next_version_num; // prevents duplicates for version numbers
 
         // add content since new in `head`
         std::string strarg(content);
-        mylist.appendNode(strarg, hash, version);
+        mylist.addNode(strarg, hash, version);
 
         return;
     }
@@ -264,6 +285,7 @@ public:
         {
             std::cout << "Please enter a valid version number. "
             << "If you are not sure please press 'p' to list all valid version numbers.\n";
+            return; // exit
         }
 
         resetRead();
@@ -278,6 +300,7 @@ public:
 
         std::cout << "Version " << version << " loaded successfully. " << 
         "Please refresh your text editor to see the changes.\n";
+        return;
     }
 
     void remove(int version)
@@ -285,6 +308,7 @@ public:
         if( !this->mylist.getNodeByVersion(version) )
         {
             std::cout << "Please enter a valid version number.\n";
+            return; // exit
         }
         resetRead();
         
@@ -300,6 +324,7 @@ public:
         {
             std::cout << "Please enter a valid version number. If you are not sure \
             please press 'p' to list all valid version numbers.\n";
+            return; // exit
         }
 
         resetRead();
@@ -308,7 +333,7 @@ public:
         std::istringstream content2( mylist.getNodeByVersion(version2)->getContent() );
         
         // call recursive helper function
-        compare_and_print_lines(&content1, &content2);
+        compareAndPrintLines(&content1, &content2);
         
         return;
     }
@@ -319,7 +344,7 @@ public:
         int count = 0;
         Node* head = mylist.getHead();
 
-        help_search(keyword, head, count);
+        helpSearch(keyword, head, count);
 
         if(count == 0 ) std::cout << "Your keyword '" << keyword << "' was not found in any version.\n";
         return;
@@ -329,6 +354,7 @@ public:
 
 protected:
     // CLASS ATTRIBUTES
+    int next_version_num;
     std::fstream rfile, wfile;
     LinkedList mylist;
 
@@ -340,17 +366,15 @@ protected:
             std::cout << "ERROR 322: `file.txt` does not exist. Goodbye!\n";
         }
         return;
-
-        //return std::move(rfile); // does not get deleted with `move`
     }
     
     void resetRead()
     {
-        rfile.clear();
+        rfile.clear();      // clear flags from rfile
         rfile.seekg(0);     // reposition to beginning
     }
 
-    void print_help_message()
+    void printHelpMessage()
     {
         std::string help = "\
     To add the content of your file to version control press 'a'\n\
@@ -365,20 +389,20 @@ protected:
         return;
     }
 
-    void print_welcome_message()
+    void printWelcomeMessage()
     {
         std::cout << "Welcome to the Comp322 file versioning system!\n\n";
-        print_help_message();
+        printHelpMessage();
         return;
     }
 
-    unsigned int hash_it (std::string someString){
+    unsigned int hashIt (std::string someString){
         std::hash<std::string> hash_obj;
         return hash_obj(someString);
     }
 
     // Helper function for `compare()` that compares lines and displays if non-identical
-    void compare_and_print_lines(std::istringstream* text1, std::istringstream* text2, int linenum=1)
+    void compareAndPrintLines(std::istringstream* text1, std::istringstream* text2, int linenum=1)
     {
         if(text1->eof() && text2->eof()) return;  //base case
         
@@ -387,15 +411,15 @@ protected:
         if( !std::getline(*text1, line1, '\n')) line1 = "<Empty Line>"; // overwrite `line1` if getline unsuccessful
         if( !std::getline(*text2, line2, '\n')) line2 = "<Empty Line>";
 
-        unsigned int hash1 = hash_it(line1);
-        unsigned int hash2 = hash_it(line2);
+        unsigned int hash1 = hashIt(line1);
+        unsigned int hash2 = hashIt(line2);
 
         std::cout << "Line " << linenum << ": ";  // display line number
 
         if(hash1 == hash2) std::cout << "<Identical>\n";
         else std::cout << line1 << " <<>> " << line2 << '\n';
         
-        compare_and_print_lines(text1, text2, ++linenum);   // pre-increment linenum
+        compareAndPrintLines(text1, text2, ++linenum);   // pre-increment linenum
     }
 
     // Helper function for `search()` that checks following punctuation:
@@ -432,12 +456,12 @@ protected:
     }
 
     // Recursive helper function for `search`
-    void help_search(const std::string keyword, Node* node, int& count, bool isFoundPrinted=false)
+    void helpSearch(const std::string keyword, Node* node, int& count, bool isFoundPrinted=false)
     {
         if(node == nullptr) return; // base case
 
         std::string word, content = node->getContent();
-        unsigned int keyword_hash = hash_it(keyword);
+        unsigned int keyword_hash = hashIt(keyword);
 
         // remove any punctuation in word
         int length = content.size();
@@ -451,12 +475,12 @@ protected:
         }
 
         // save content as string stream for easier word access
-        std::stringstream contentstream (content);
+        std::stringstream contentstream(content);
         
         bool isFound = false;
         while(contentstream >> word)
         {
-            if(hash_it(word) == keyword_hash){
+            if(hashIt(word) == keyword_hash){
                 count++;
                 isFound = true;
             }
@@ -469,7 +493,7 @@ protected:
         }
         else if (count > 1 && isFound) node->printNode();
 
-        help_search(keyword, node->getNext(), count, isFoundPrinted);
+        helpSearch(keyword, node->getNext(), count, isFoundPrinted);
     }
 
 };
@@ -480,23 +504,30 @@ class EnhancedGit322 : public Git322 {
     EnhancedGit322()
     {
         namespace fsys = std::filesystem; // for reading and saving files
+        int version_num, dir_size = 0;
         
         if(!fsys::exists(tempdir)){
             fsys::create_directory(tempdir); // create tempdir since no old versions
         } else {
             //reads files in tempdir 1-by-1, and saves to program memory
             for (const auto & persistent_file : fsys::directory_iterator(tempdir)){
+                
+                // trim both " from both ends of the persistent_file
                 std::string full_path(persistent_file.path());
-                full_path.erase(0,0); // trim both `"`
+                full_path.erase(0,0); 
                 full_path.erase(full_path.end(), full_path.end());
                 
                 rfile.close();
-                if(!readFile(full_path)) continue; // point rfile to persistent_file
+                if(!readFile(full_path)) continue; // point rfile to persistent_file, or continue if error
 
-                int version_num = getVersionNum(getRelativePath(full_path)); // get vNum from file name
+                version_num = getVersionNum(getRelativePath(full_path)); // get version_num from file name
                 addPersistentFile(version_num); // pre-load persistent_file
+                dir_size++; // used for future version add's to prevent duplicate
             }
         }
+
+        // set next_version_num to dir_size + 1 to prevent duplicate numbers
+        this->next_version_num = dir_size; // to prevent duplicate numbers
 
         rfile.close();
         readFile(FILE_NAME); // point rfile to `file.txt`
@@ -545,9 +576,12 @@ class EnhancedGit322 : public Git322 {
         return std::stoi(num);
     }
     
+    // adds target file from .tempVersionHolder
     void addPersistentFile(int version_num)
     {
         resetRead();
+
+        //Git322::add(version_num) ??
 
         std::string aline, content = "";
         while(getline(rfile, aline)){
@@ -557,12 +591,11 @@ class EnhancedGit322 : public Git322 {
 
         content.erase(content.end()-1); //remove last '\n'
 
-        unsigned int hash = hash_it(content);    // hash input `content`
+        unsigned int hash = hashIt(content);    // hash input `content`
 
-        // add content from persisten layer
+        // add content from persistent layer
         std::string strarg(content);
-        mylist.appendNode(strarg, hash, version_num);
-
+        mylist.addNode(strarg, hash, version_num);
         return;
     }
 
@@ -572,8 +605,10 @@ class EnhancedGit322 : public Git322 {
         if(update_this_version.empty())
         {
             for(int i=1; i<= mylist.getNumberOfVersions(); i++)
-            {
+            {   
                 Node* tempNode = mylist.getNodeByVersion(i);
+                if(tempNode == nullptr) continue;   // skip non-existing versions
+
                 int versionNum = tempNode->getVersion();
                 std::string fileName = tempdir + "file" + std::to_string(versionNum) + ".txt";
 
@@ -586,6 +621,25 @@ class EnhancedGit322 : public Git322 {
             }
         }
         return true;
+    }
+
+    public:
+    // used to remove persistent files
+    void remove(const int version)
+    {
+        if(!this->mylist.getNodeByVersion(version))
+        {
+            std::cout << "Please enter a valid version number.\n";
+            return; // exit
+        }
+
+        // get name for target file to remove from persistence layer (tempdir)
+        std::string remove_this_file = tempdir + "file" + std::to_string(version) + ".txt";
+
+        // remove from tempdir, if file does not exist, no error raised!
+        std::filesystem::remove(remove_this_file);
+        Git322::remove(version); // call parent method to remove from `mylist`
+        return;
     }
 
 };
@@ -827,15 +881,15 @@ int main(){
 int main(){
     
     // Starting...
-    print_welcome_message();
+    printWelcomeMessage();
     
     char user_input = ' ';	//user's input stored here
     int error_code = 0;     //stores error code from interpreter
 
     mylist.head = new Node("Dear Comp 322 students.", 123, 1);
-    mylist.appendNode("Dear Comp 322 students. C++ is a complicated language.", 456, 2);
-    mylist.appendNode("Dear Comp 322 students. C++ is a complicated language.\nCoding in C++ is like going to the gym: No pain no gain!", 224, 3);
-    mylist.appendNode("To the moon!!!", 104, 4);
+    mylist.addNode("Dear Comp 322 students. C++ is a complicated language.", 456, 2);
+    mylist.addNode("Dear Comp 322 students. C++ is a complicated language.\nCoding in C++ is like going to the gym: No pain no gain!", 224, 3);
+    mylist.addNode("To the moon!!!", 104, 4);
 
     //interactive loop
 	do{
