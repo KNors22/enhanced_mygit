@@ -96,15 +96,6 @@ public:
 
     ~LinkedList(){
         Node* temp, *next = head;
-        
-        // delete linked list
-        // while(next != nullptr){
-        //     temp = next->getNext();
-        //     delete next;
-        //     next = temp;
-        // }
-
-        // delete head;
     }
 
     /** HELPER FUNCTIONS */
@@ -117,7 +108,7 @@ public:
             head = hold;
         }
         else if(head->getVersion() > version){       // Scenario 1: head > hold
-            hold->setNext(head);                                            // Set hold.next = head; hold = head
+            hold->setNext(head);                     // Set hold.next = head; hold = head
             head = hold;
         }
         else{  // insert of append if nonempty
@@ -256,16 +247,15 @@ public:
             return;
         }
         
-        // display success message
-        std::cout << "Your content had been added successfully." << std::endl;
-
         // calculate new version number
-        int version = ++this->next_version_num; // prevents duplicates for version numbers
+        int version = this->next_version_num++; // prevents duplicates for version numbers
 
         // add content since new in `head`
         std::string strarg(content);
         mylist.addNode(strarg, hash, version);
-
+        
+        // display success message 
+        std::cout << "Your content had been added successfully." << std::endl;
         return;
     }
 
@@ -504,7 +494,8 @@ class EnhancedGit322 : public Git322 {
     EnhancedGit322()
     {
         namespace fsys = std::filesystem; // for reading and saving files
-        int version_num, dir_size = 0;
+        int version_num;
+        unsigned int hash_value;
         
         if(!fsys::exists(tempdir)){
             fsys::create_directory(tempdir); // create tempdir since no old versions
@@ -512,22 +503,27 @@ class EnhancedGit322 : public Git322 {
             //reads files in tempdir 1-by-1, and saves to program memory
             for (const auto & persistent_file : fsys::directory_iterator(tempdir)){
                 
-                // trim both " from both ends of the persistent_file
+                // trim " from both ends of the persistent_file
                 std::string full_path(persistent_file.path());
-                full_path.erase(0,0); 
+                full_path.erase(0,0);
                 full_path.erase(full_path.end(), full_path.end());
                 
                 rfile.close();
                 if(!readFile(full_path)) continue; // point rfile to persistent_file, or continue if error
 
-                version_num = getVersionNum(getRelativePath(full_path)); // get version_num from file name
-                addPersistentFile(version_num); // pre-load persistent_file
-                dir_size++; // used for future version add's to prevent duplicate
+                // get version_num and hash_value from file name
+                version_num = getVersionNum(getRelativePath(full_path));
+                hash_value = getHashValue(full_path);
+
+                addPersistentFile(version_num, hash_value); // pre-load persistent_file
+
+                if(this->highest_num < version_num)
+                    this->highest_num = version_num;
             }
         }
 
-        // set next_version_num to dir_size + 1 to prevent duplicate numbers
-        this->next_version_num = dir_size; // to prevent duplicate numbers
+        // set next_version_num to highest_num + 1 to prevent duplicate numbers
+        this->next_version_num = highest_num + 1;
 
         rfile.close();
         readFile(FILE_NAME); // point rfile to `file.txt`
@@ -538,12 +534,13 @@ class EnhancedGit322 : public Git322 {
         if(rfile.is_open()) rfile.close();
 
         // save all versions in program mem to persistent layer
-        updatePersistentLayer();
+        updatePersistenceLayer();
     };
 
     private:
     // CLASS MEMBERS
     std::string tempdir = ".tempVersionHolder/";
+    int highest_num = -1;
 
     // sets `rfile` read pointer to `in_file`
     bool readFile(std::string in_file)
@@ -566,18 +563,34 @@ class EnhancedGit322 : public Git322 {
 
     int getVersionNum(std::string in_str)
     {
-        std::string num = "";
-        for (int i=0; i < in_str.length(); i++) {
-            if(in_str[i] >= '0' && in_str[i] <= '9'){
-                num += in_str[i];
-            }   
-        }
+        int delimeter1 = in_str.find("file") + 4;
+        int number_char = in_str.find('_') - delimeter1;
+  
+        std::string version_num = in_str.substr(delimeter1, number_char);
+        return std::atoi(version_num.c_str());
 
-        return std::stoi(num);
+
+        // std::string num = "";
+        // for (int i=0; i < in_str.length(); i++) {
+        //     if(in_str[i] >= '0' && in_str[i] <= '9'){
+        //         num += in_str[i];
+        //     }   
+        // }
+
+        //return std::stoi(num);
+    }
+
+    unsigned int getHashValue(std::string in_str) 
+    {
+        int delimeter1 = in_str.find('_') + 1;
+        int number_char = in_str.find('.') - delimeter1;
+  
+        std::string hash_str = in_str.substr(delimeter1, number_char);
+        return std::atoi(hash_str.c_str());
     }
     
     // adds target file from .tempVersionHolder
-    void addPersistentFile(int version_num)
+    void addPersistentFile(int version_num, unsigned int hash_value)
     {
         resetRead();
 
@@ -591,35 +604,34 @@ class EnhancedGit322 : public Git322 {
 
         content.erase(content.end()-1); //remove last '\n'
 
-        unsigned int hash = hashIt(content);    // hash input `content`
+        //unsigned int hash = hashIt(content);    // hash input `content`
 
         // add content from persistent layer
         std::string strarg(content);
-        mylist.addNode(strarg, hash, version_num);
+        mylist.addNode(strarg, hash_value, version_num);
         return;
     }
 
-    bool updatePersistentLayer(const std::string update_this_version = "")
+    bool updatePersistenceLayer()
     {
         // save all versions
-        if(update_this_version.empty())
+        for(int i=1; i <= mylist.getNumberOfVersions()+ 1; i++)
         {
-            for(int i=1; i<= mylist.getNumberOfVersions(); i++)
-            {   
-                Node* tempNode = mylist.getNodeByVersion(i);
-                if(tempNode == nullptr) continue;   // skip non-existing versions
+            Node* tempNode = mylist.getNodeByVersion(i);
+            if(tempNode == nullptr) continue;   // skip non-existing versions
 
-                int versionNum = tempNode->getVersion();
-                std::string fileName = tempdir + "file" + std::to_string(versionNum) + ".txt";
+            int versionNum = tempNode->getVersion();
+            unsigned int hashValue = tempNode->getHash();
+            std::string fileName = tempdir + "file" + std::to_string(versionNum) + "_" + std::to_string(hashValue) + ".txt";
 
-                //fileName = "file[1-9].txt"
-                wfile.open(fileName, std::ios::out | std::ios::trunc);
-                if(wfile.fail()) return false;
-                
-                wfile << tempNode->getContent();
-                wfile.close();
-            }
+            // fileName : "file[i]_hashValue.txt", where i an integer
+            wfile.open(fileName, std::ios::out | std::ios::trunc);
+            if(wfile.fail()) return false;
+            
+            wfile << tempNode->getContent();
+            wfile.close();
         }
+        
         return true;
     }
 
@@ -656,18 +668,19 @@ int main(){
     
     char user_input = ' ';	//user's input stored here
 
-    //interactive loop
+    // Interactive loop
 	do{
-        //opening file in read/write mode
+        // Opening file in read/write mode
 
         std::cout << PROMPT << " ";
         std::cin >> user_input;
         std::cin.ignore();      // remove '\n' from stream
 
-        // Interprets `user_input`
+        
         std::string aline, content = "";
         int version1, version2;
 
+        // Interprets `user_input`
         switch(user_input)
         {
             case 'e':   /* EXIT */
@@ -745,7 +758,6 @@ int main(){
 
     } while(user_input != 'e');
 
-    //delete LinkedList::head;
     return 0;
 }
 #endif

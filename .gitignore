@@ -1,12 +1,9 @@
-git322
-file.txt
-/temp
-ll
-*/diff.cpp
-/to_submit
-err.txt
-git322.dSYM/Contents/Info.plist
-/to_compare.cpp
-.tempVersionHolder/
-mytest
-test.cpp
+# ignore everything
+*
+
+# except for
+!assignment3_260929325.cpp
+!makefile
+!README.md
+!linked_list.cpp
+!.gitignore
