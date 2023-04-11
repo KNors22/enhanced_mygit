@@ -30,7 +30,6 @@ Legal Operations include:
 class Node
 {
     public:
-    //TODO: fix constructors
     Node(const std::string c, unsigned int h, int v, Node* n): content(c), hash_value(h), version(v), next(n)
     {
         contentBuffer = new char[c.size() + 1];
@@ -118,10 +117,10 @@ public:
             while(nexter != nullptr){      
             
                 // Insert node
-                if(nexter->getVersion() > version){                 // Scenario 2: next < hold < nexter
-                    hold->setNext(nexter);                          // hold.next = nexter; next.next = hold;
+                if(nexter->getVersion() > version){     // Scenario 2: next < hold < nexter
+                    hold->setNext(nexter);              // hold.next = nexter; next.next = hold;
                     next->setNext(hold);
-                    break;                                          // break loop since set
+                    break;                              // break loop since set
                 }
 
                 // get next and nexter to check
@@ -132,7 +131,6 @@ public:
             // append node
             next->setNext(hold);
         }
-        // 1 2 3 6 7 8 (insert 5)
         this->size++;
         return;
     }
@@ -169,7 +167,7 @@ public:
         }
     }
 
-    //Checks if input content is already in `head`
+    // Checks if input content is already in `head`
     bool checkHashInHistory(unsigned int in_hash)
     {
         Node* temp = this->head;
@@ -203,7 +201,6 @@ public:
                 previous->setNext(headtmp->getNext());
                 headtmp->setNext(nullptr);
                 
-                // delete headtmp;    // remove Node
                 this->size--;
                 return true;
             }
@@ -309,7 +306,7 @@ public:
 
     void compare(int version1, int version2)
     {
-        //checking if both valid
+        // checking if both valid
         if( !this->mylist.getNodeByVersion(version1) || !this->mylist.getNodeByVersion(version2) )
         {
             std::cout << "Please enter a valid version number. If you are not sure \
@@ -340,7 +337,6 @@ public:
         return;
     }
 
-    
 
 protected:
     // CLASS ATTRIBUTES
@@ -568,16 +564,6 @@ class EnhancedGit322 : public Git322 {
   
         std::string version_num = in_str.substr(delimeter1, number_char);
         return std::atoi(version_num.c_str());
-
-
-        // std::string num = "";
-        // for (int i=0; i < in_str.length(); i++) {
-        //     if(in_str[i] >= '0' && in_str[i] <= '9'){
-        //         num += in_str[i];
-        //     }   
-        // }
-
-        //return std::stoi(num);
     }
 
     unsigned int getHashValue(std::string in_str) 
@@ -594,8 +580,6 @@ class EnhancedGit322 : public Git322 {
     {
         resetRead();
 
-        //Git322::add(version_num) ??
-
         std::string aline, content = "";
         while(getline(rfile, aline)){
             content += aline;
@@ -603,8 +587,6 @@ class EnhancedGit322 : public Git322 {
         }
 
         content.erase(content.end()-1); //remove last '\n'
-
-        //unsigned int hash = hashIt(content);    // hash input `content`
 
         // add content from persistent layer
         std::string strarg(content);
@@ -615,7 +597,7 @@ class EnhancedGit322 : public Git322 {
     bool updatePersistenceLayer()
     {
         // save all versions
-        for(int i=1; i <= mylist.getNumberOfVersions()+ 1; i++)
+        for(int i=1; i <= this->next_version_num+1; i++)
         {
             Node* tempNode = mylist.getNodeByVersion(i);
             if(tempNode == nullptr) continue;   // skip non-existing versions
@@ -639,14 +621,16 @@ class EnhancedGit322 : public Git322 {
     // used to remove persistent files
     void remove(const int version)
     {
-        if(!this->mylist.getNodeByVersion(version))
+        Node* to_remove = this->mylist.getNodeByVersion(version);
+        if(!to_remove)
         {
             std::cout << "Please enter a valid version number.\n";
             return; // exit
         }
 
         // get name for target file to remove from persistence layer (tempdir)
-        std::string remove_this_file = tempdir + "file" + std::to_string(version) + ".txt";
+        std::string s_hash = std::to_string(to_remove->getHash());
+        std::string remove_this_file = tempdir + "file" + std::to_string(version) + "_" + s_hash + ".txt";
 
         // remove from tempdir, if file does not exist, no error raised!
         std::filesystem::remove(remove_this_file);

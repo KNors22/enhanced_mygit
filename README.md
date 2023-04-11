@@ -36,8 +36,8 @@ Tasks for the developer are situated under [Developer's Tasks](#Developer's-Task
 | **Add v1**    | *No effect* :arrow_right: Saving occurs at program exit -***info loss if crash occurs***-<br> :arrow_right_hook: Prevent vNum duplicates | ✅ |
 | **Remove**    | Remove target version from persistence layer | ✅ |
 | **Load**      | *No effect on persistence layer* | n/a |
-| **Exit v1**   | Save existing versions from progmem using text files + their version number| ✅ |
-| **Exit v2**   | Persistence layer uses serialization to save versions -***better***- <br> :arrow_right_hook: Persistance layer also holds  hash value now  | ❌ |
+| **Exit v1**   | Save existing versions from progmem using text files + version number + hash value| ✅ |
+| **Exit v2**   | Persistence layer uses serialization to save versions -***better***- | ❌ |
 
 #### **Comment:** When using `add()` duplicates of a version number will not appear.
 ---
@@ -45,7 +45,7 @@ Tasks for the developer are situated under [Developer's Tasks](#Developer's-Task
 ## **Developer's-Tasks**
 | Task                   | Description of Task | Completed |
 | ---------------------- | ------------------- |   :----:  |
-| **Make Exit v2**       | Enhanced Serialization :arrow_right: save hash in file name too | ❌ |
+| **Make Exit v2**       | Enhanced Serialization :arrow_right: save hash in file name too | ✅ |
 | **Exception Handling** | Prevent crashes | ❌ |
 
 
@@ -81,6 +81,7 @@ Tasks for the developer are situated under [Developer's Tasks](#Developer's-Task
 | ***1bf0638*** | - Added initial `EnhancedGit` with file version persistence feature using `.tmpVersionHolder` dir -***buggy***- |
 | ***29f0783*** | - Preloading works using `addPersistentFile()` instead of standard `add()`  <br> - Fixed `add()` to point to `file.txt` after preload |
 | ***7ca319d*** | - **FULL WORKING VERSION** <br> - Fixed ordering when adding persistent versions <br> - Fixed segfault when at exit point <br> - `remove()` now updates persistence layer <br> - Fixed logic errors for `load()` and `next_version_num` <br> - Improved naming convention |
-| ***CURRENT*** | - Enhanced persistence: hash value saved when version persisted <br> - Fixed end condition for loop in `updatePersistenceLayer()` |
+| ***1243a15*** | - Enhanced persistence: hash value saved when version persisted <br> - Fixed end condition for loop in `updatePersistenceLayer()` |
+| ***CURRENT*** | - Fixed end condition in for loop of `updatePersistenceLayer()` <br> - Updated `remove()` to consider hash value in file name |
 
 ---
